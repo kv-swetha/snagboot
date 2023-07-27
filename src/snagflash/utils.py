@@ -4,6 +4,12 @@ import sys
 
 USB_RETRIES = 5
 
+def peek(iterable):
+	try:
+		first = next(iterable)
+	except StopIteration:
+		return None
+
 def usb_error(vid: int, pid: int):
 	print(f"Device access error: could not open USB device {vid:04x}:{pid:04x}", file=sys.stderr)
 	print("If the device exists, make sure that you have rw access rights to it", file=sys.stderr)
@@ -22,17 +28,18 @@ def int_arg(arg: str) -> int:
 		return int(arg)
 
 def get_usb(vid: int, pid: int) -> usb.core.Device:
-	dev = usb.core.find(idVendor = vid, idProduct = pid)
+	dev = usb.core.find(idVendor = vid, idProduct = pid, find_all=True)
 	retries = 0
-	while dev is None:
+	device = peek(dev)
+	while device is None:
 		if retries >= USB_RETRIES:
 			usb_error(vid, pid)
 		print(f"Retrying USB connection ({retries}/{USB_RETRIES})...")
 		time.sleep(2)
-		dev = usb.core.find(idVendor = vid, idProduct = pid)
+		device = usb.core.find(idVendor = vid, idProduct = pid)
 		retries += 1
 	try:
-		dev.get_active_configuration()
+		device.get_active_configuration()
 	except usb.core.USBError:
 		usb_error(vid, pid)
 	return dev
